@@ -22,4 +22,16 @@ model Account {
   dateOfBirth   String
   accountNumber String   @unique
   createdAt     DateTime @default(now())
+  cards         Card[]
+}
+
+model Card {
+  id            String   @id @default(uuid())
+  cardNumber    String   @unique
+  cvv           String
+  expiryDate    String
+  status        String   @default("active")
+  accountId     String
+  account       Account  @relation(fields: [accountId], references: [id])
+  createdAt     DateTime @default(now())
 }

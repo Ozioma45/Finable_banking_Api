@@ -1,5 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { generateAccountNumber } from "../utils/generateAccountNum";
+import {
+  generateCardNumber,
+  generateCVV,
+  getExpiryDate,
+} from "../utils/generateCardDetails";
 
 const prisma = new PrismaClient();
 
@@ -24,6 +29,24 @@ export const createNewAccount = async (data: any) => {
       accountNumber,
     },
   });
+  // Create a virtual card for the account
+  let cardNumber;
+  do {
+    cardNumber = generateCardNumber();
+    existing = await prisma.card.findUnique({ where: { cardNumber } });
+  } while (existing);
 
-  return account;
+  const card = await prisma.card.create({
+    data: {
+      cardNumber,
+      cvv: generateCVV(),
+      expiryDate: getExpiryDate(),
+      accountId: account.id,
+    },
+  });
+
+  return {
+    ...account,
+    virtualCard: card,
+  };
 };
