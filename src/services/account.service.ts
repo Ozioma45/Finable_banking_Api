@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { encrypt, decrypt } from "../utils/encryption";
 import { generateAccountNumber } from "../utils/generateAccountNum";
 import {
   generateCardNumber,
@@ -19,16 +20,20 @@ export const createNewAccount = async (data: any) => {
     existing = await prisma.account.findUnique({ where: { accountNumber } });
   } while (existing);
 
+  const encryptedPhone = encrypt(phoneNumber);
+  const encryptedDob = encrypt(dateOfBirth);
+
   const account = await prisma.account.create({
     data: {
       firstName,
       surname,
       email,
-      phoneNumber,
-      dateOfBirth,
+      phoneNumber: JSON.stringify(encryptedPhone),
+      dateOfBirth: JSON.stringify(encryptedDob),
       accountNumber,
     },
   });
+
   // Create a virtual card for the account
   let cardNumber;
   do {
@@ -36,17 +41,45 @@ export const createNewAccount = async (data: any) => {
     existing = await prisma.card.findUnique({ where: { cardNumber } });
   } while (existing);
 
+  const encryptedCardNumber = encrypt(cardNumber);
+  const encryptedCVV = encrypt(generateCVV());
+  const encryptedExpiry = encrypt(getExpiryDate());
+
   const card = await prisma.card.create({
     data: {
-      cardNumber,
-      cvv: generateCVV(),
-      expiryDate: getExpiryDate(),
+      cardNumber: JSON.stringify(encryptedCardNumber),
+      cvv: JSON.stringify(encryptedCVV),
+      expiryDate: JSON.stringify(encryptedExpiry),
       accountId: account.id,
     },
   });
 
   return {
-    ...account,
-    virtualCard: card,
+    account: {
+      ...account,
+      phoneNumber: {
+        encrypted: encryptedPhone,
+        decrypted: decrypt(encryptedPhone),
+      },
+      dateOfBirth: {
+        encrypted: encryptedDob,
+        decrypted: decrypt(encryptedDob),
+      },
+    },
+    virtualCard: {
+      ...card,
+      cardNumber: {
+        encrypted: encryptedCardNumber,
+        decrypted: decrypt(encryptedCardNumber),
+      },
+      cvv: {
+        encrypted: encryptedCVV,
+        decrypted: decrypt(encryptedCVV),
+      },
+      expiryDate: {
+        encrypted: encryptedExpiry,
+        decrypted: decrypt(encryptedExpiry),
+      },
+    },
   };
 };
