@@ -83,3 +83,50 @@ export const createNewAccount = async (data: any) => {
     },
   };
 };
+
+export const getAllAccountsWithDecryption = async () => {
+  const accounts = await prisma.account.findMany();
+
+  return accounts
+    .map((acc) => {
+      try {
+        const encryptedPhone = JSON.parse(acc.phoneNumber as string);
+        const encryptedDob = JSON.parse(acc.dateOfBirth as string);
+
+        return {
+          accountNumber: acc.accountNumber,
+          fullName: `${acc.firstName} ${acc.surname}`,
+          phoneNumber: {
+            encrypted: encryptedPhone,
+            decrypted: decrypt(encryptedPhone),
+          },
+          dateOfBirth: {
+            encrypted: encryptedDob,
+            decrypted: decrypt(encryptedDob),
+          },
+        };
+      } catch (err) {
+        console.error(
+          `Skipping invalid entry for account ${acc.accountNumber}`,
+          err
+        );
+        return null; // or filter later
+      }
+    })
+    .filter(Boolean);
+};
+
+// Utility to decrypt data sent from client
+type EncryptedField = { iv: string; content: string };
+type DecryptionInput = Partial<Record<string, EncryptedField>>;
+
+export const decryptClientPayload = (payload: DecryptionInput) => {
+  const decrypted: Record<string, string> = {};
+  for (const key in payload) {
+    const encrypted = payload[key];
+    if (encrypted) {
+      decrypted[key] = decrypt(encrypted);
+    }
+  }
+  return decrypted;
+};

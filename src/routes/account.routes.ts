@@ -1,7 +1,13 @@
 import express from "express";
-import { createAccount } from "../controllers/account.controller";
+import {
+  createAccount,
+  getAllAccounts,
+  decryptFromClientData,
+} from "../controllers/account.controller";
 
 const router = express.Router();
-router.post("/accounts", createAccount);
+router.post("/create", createAccount);
+router.get("/accounts", getAllAccounts);
+router.post("/decrypt", decryptFromClientData);
 
 export default router;
